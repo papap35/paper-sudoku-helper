@@ -9,6 +9,8 @@ import { emptyGrid, type AnalyzeResult, type Grid } from './types'
 
 type Message = { text: string; isError: boolean } | null
 
+const AUTO_ANALYZE_DELAY_MS = 600
+
 export default function App() {
   const [grid, setGrid] = useState<Grid>(emptyGrid)
   const [analysis, setAnalysis] = useState<AnalyzeResult | null>(null)
@@ -26,12 +28,21 @@ export default function App() {
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
     Array.from({ length: 9 }, () => Array(9).fill(null)),
   )
+  const autoAnalyzeTimer = useRef<number | null>(null)
 
   useEffect(() => {
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl)
     }
   }, [previewUrl])
+
+  useEffect(() => {
+    return () => {
+      if (autoAnalyzeTimer.current !== null) {
+        window.clearTimeout(autoAnalyzeTimer.current)
+      }
+    }
+  }, [])
 
   const conflictSet = useMemo(() => {
     const set = new Set<string>()
@@ -47,12 +58,25 @@ export default function App() {
     setMessage(null)
   }
 
+  function cancelAutoAnalyze() {
+    if (autoAnalyzeTimer.current !== null) {
+      window.clearTimeout(autoAnalyzeTimer.current)
+      autoAnalyzeTimer.current = null
+    }
+  }
+
+  function scheduleAutoAnalyze(targetGrid: Grid) {
+    cancelAutoAnalyze()
+    autoAnalyzeTimer.current = window.setTimeout(() => {
+      autoAnalyzeTimer.current = null
+      void runAnalyze(targetGrid)
+    }, AUTO_ANALYZE_DELAY_MS)
+  }
+
   function handleCellChange(r: number, c: number, value: number) {
-    setGrid((prev) => {
-      const next = prev.map((row) => [...row])
-      next[r][c] = value
-      return next
-    })
+    const next = grid.map((row) => [...row])
+    next[r][c] = value
+    setGrid(next)
     if (value !== 0) {
       const key = `${r},${c}`
       setUserCandidates((prev) => {
@@ -63,12 +87,13 @@ export default function App() {
       })
     }
     clearAnalysis()
+    scheduleAutoAnalyze(next)
   }
 
-  async function handleAnalyze() {
+  async function runAnalyze(targetGrid: Grid) {
     setMessage(null)
     try {
-      const result = await analyzeGrid(grid)
+      const result = await analyzeGrid(targetGrid)
       setAnalysis(result)
       setHintCells(new Set())
       setHintExplanation([])
@@ -85,6 +110,11 @@ export default function App() {
     } catch (err) {
       setMessage({ text: err instanceof ApiError ? err.message : '連線失敗，請稍後再試。', isError: true })
     }
+  }
+
+  function handleAnalyze() {
+    cancelAutoAnalyze()
+    return runAnalyze(grid)
   }
 
   function handleHint() {
@@ -108,6 +138,7 @@ export default function App() {
   }
 
   function handleClear() {
+    cancelAutoAnalyze()
     setGrid(emptyGrid())
     setUserCandidates({})
     setEditingCell(null)
