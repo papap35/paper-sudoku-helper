@@ -71,6 +71,7 @@ describe('App', () => {
           message: '看看第 5 列、第 5 欄這一格——把其他規則排除後，它只剩下一個可能的數字了。',
           cells: [[4, 4]],
           difficulty: '簡單',
+          explanation: [],
         },
       }),
     )
@@ -148,6 +149,7 @@ describe('App', () => {
           message: '訊息',
           cells: [[4, 4]],
           difficulty: '簡單',
+          explanation: [],
         },
       }),
     )
@@ -160,6 +162,33 @@ describe('App', () => {
 
     const cells = container.querySelectorAll('.cell')
     expect(cells[4 * 9 + 4]).toHaveClass('hint')
+  })
+
+  it('shows a step-by-step explanation when hint is clicked', async () => {
+    const user = userEvent.setup()
+    vi.mocked(analyzeGrid).mockResolvedValue(
+      baseResult({
+        hint: {
+          technique: 'naked_single',
+          technique_name: '唯一候選數 (Naked Single)',
+          message: '訊息',
+          cells: [[4, 4]],
+          difficulty: '簡單',
+          explanation: ['這格目前是空的。', '所以這格只能填 5。'],
+        },
+      }),
+    )
+
+    render(<App />)
+    await user.click(screen.getByRole('button', { name: '分析盤面（候選數字 / 錯誤檢查）' }))
+    await screen.findByText('💡 唯一候選數 (Naked Single)：訊息')
+
+    expect(document.querySelector('.hint-explanation')).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: '給我一個提示' }))
+
+    expect(screen.getByText('這格目前是空的。')).toBeInTheDocument()
+    expect(screen.getByText('所以這格只能填 5。')).toBeInTheDocument()
   })
 
   it('clears the board and analysis state when clear is clicked', async () => {

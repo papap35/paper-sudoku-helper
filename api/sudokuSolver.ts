@@ -15,6 +15,8 @@ export interface Hint {
   cells: CellPos[]
   region?: string
   difficulty: string
+  /** 逐步推理過程，用於使用者想了解「為什麼」時顯示。 */
+  explanation: string[]
 }
 
 export interface Progress {
@@ -60,6 +62,49 @@ function boxCells(r: number, c: number): CellPos[] {
     }
   }
   return cells
+}
+
+function rowCells(r: number): CellPos[] {
+  return Array.from({ length: 9 }, (_, c): CellPos => [r, c])
+}
+
+function colCells(c: number): CellPos[] {
+  return Array.from({ length: 9 }, (_, r): CellPos => [r, c])
+}
+
+function cellLabel([r, c]: CellPos): string {
+  return `第 ${r + 1} 列第 ${c + 1} 欄`
+}
+
+/** 回傳一個群組（列/欄/宮）中已經填入的數字，由小到大排序。 */
+function digitsInGroup(grid: Grid, cells: CellPos[]): number[] {
+  const digits = new Set<number>()
+  for (const [r, c] of cells) {
+    if (grid[r][c] !== 0) {
+      digits.add(grid[r][c])
+    }
+  }
+  return [...digits].sort((a, b) => a - b)
+}
+
+/** 找出是哪一格已經填了 digit，導致 (r,c) 不能再填這個數字。 */
+function findBlocker(grid: Grid, r: number, c: number, digit: number): { pos: CellPos; reason: string } | null {
+  for (let cc = 0; cc < 9; cc++) {
+    if (grid[r][cc] === digit) {
+      return { pos: [r, cc], reason: `同一列（第 ${r + 1} 列）` }
+    }
+  }
+  for (let rr = 0; rr < 9; rr++) {
+    if (grid[rr][c] === digit) {
+      return { pos: [rr, c], reason: `同一欄（第 ${c + 1} 欄）` }
+    }
+  }
+  for (const [br, bc] of boxCells(r, c)) {
+    if (grid[br][bc] === digit) {
+      return { pos: [br, bc], reason: '同一宮' }
+    }
+  }
+  return null
 }
 
 /** 回傳每格的候選數字集合（已填的格子為空集合）。 */
@@ -138,12 +183,23 @@ function nakedSingleHint(grid: Grid, candidates: Set<number>[][]): Hint | null {
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       if (grid[r][c] === 0 && candidates[r][c].size === 1) {
+        const digit = [...candidates[r][c]][0]
+        const usedInRow = digitsInGroup(grid, rowCells(r))
+        const usedInCol = digitsInGroup(grid, colCells(c))
+        const usedInBox = digitsInGroup(grid, boxCells(r, c))
         return {
           technique: 'naked_single',
           technique_name: '唯一候選數 (Naked Single)',
           message: `看看第 ${r + 1} 列、第 ${c + 1} 欄這一格——把其他規則排除後，它只剩下一個可能的數字了。`,
           cells: [[r, c]],
           difficulty: '簡單',
+          explanation: [
+            `這格（第 ${r + 1} 列、第 ${c + 1} 欄）目前是空的。`,
+            `同一列已經填了：${usedInRow.join('、') || '（無）'}`,
+            `同一欄已經填了：${usedInCol.join('、') || '（無）'}`,
+            `同一宮已經填了：${usedInBox.join('、') || '（無）'}`,
+            `把這三組數字合併後，1-9 裡只剩下 ${digit} 還沒出現過，所以這格只能填 ${digit}。`,
+          ],
         }
       }
     }
@@ -184,6 +240,22 @@ function hiddenSingleHint(grid: Grid, candidates: Set<number>[][]): Hint | null 
       const holders = emptyCells.filter(([r, c]) => candidates[r][c].has(digit))
       if (holders.length === 1) {
         const [hr, hc] = holders[0]
+        const explanation: string[] = [`${label}裡，數字 ${digit} 還沒有出現過。`]
+        for (const [r, c] of emptyCells) {
+          if (r === hr && c === hc) {
+            continue
+          }
+          const blocker = findBlocker(grid, r, c, digit)
+          if (blocker) {
+            explanation.push(
+              `${cellLabel([r, c])}不能填 ${digit}，因為${blocker.reason}已經有 ${digit} 了（在${cellLabel(blocker.pos)}）。`,
+            )
+          }
+        }
+        explanation.push(
+          `檢查完${label}裡所有空格後，只有${cellLabel([hr, hc])}還能填 ${digit}，所以答案就是這格的 ${digit}。`,
+        )
+
         return {
           technique: 'hidden_single',
           technique_name: '隱性唯一數 (Hidden Single)',
@@ -191,6 +263,7 @@ function hiddenSingleHint(grid: Grid, candidates: Set<number>[][]): Hint | null 
           cells: [[hr, hc]],
           region: label,
           difficulty: '中等',
+          explanation,
         }
       }
     }
@@ -238,6 +311,11 @@ function pointingPairHint(grid: Grid, candidates: Set<number>[][]): Hint | null 
               cells: holders,
               region: boxLabel,
               difficulty: '困難',
+              explanation: [
+                `${boxLabel}裡，數字 ${digit} 還沒有出現過，而且它能填的位置只剩 ${holders.map(cellLabel).join('、')}。`,
+                `這些位置剛好都在第 ${r + 1} 列，代表 ${digit} 一定會填在這個宮裡、且落在第 ${r + 1} 列的某一格。`,
+                `所以第 ${r + 1} 列中、${boxLabel}以外的格子都不可能是 ${digit} 了，例如 ${others.map(cellLabel).join('、')}，可以把 ${digit} 從這些格子的候選數字中刪除。`,
+              ],
             }
           }
         } else if (cols.size === 1) {
@@ -256,6 +334,11 @@ function pointingPairHint(grid: Grid, candidates: Set<number>[][]): Hint | null 
               cells: holders,
               region: boxLabel,
               difficulty: '困難',
+              explanation: [
+                `${boxLabel}裡，數字 ${digit} 還沒有出現過，而且它能填的位置只剩 ${holders.map(cellLabel).join('、')}。`,
+                `這些位置剛好都在第 ${c + 1} 欄，代表 ${digit} 一定會填在這個宮裡、且落在第 ${c + 1} 欄的某一格。`,
+                `所以第 ${c + 1} 欄中、${boxLabel}以外的格子都不可能是 ${digit} 了，例如 ${others.map(cellLabel).join('、')}，可以把 ${digit} 從這些格子的候選數字中刪除。`,
+              ],
             }
           }
         }

@@ -12,26 +12,49 @@ const ANALYSIS: AnalyzeResult = {
 
 describe('StatusPanel', () => {
   it('renders an empty progress text when there is no analysis yet', () => {
-    render(<StatusPanel analysis={null} hintText="" message={null} />)
+    render(<StatusPanel analysis={null} hintText="" hintExplanation={[]} message={null} />)
     expect(document.querySelector('.progress-text')).toHaveTextContent('')
     expect(document.querySelector('.progress-fill')).toHaveStyle({ width: '0%' })
   })
 
   it('renders progress, hint text and width based on the analysis', () => {
-    render(<StatusPanel analysis={ANALYSIS} hintText="💡 提示內容" message={null} />)
+    render(<StatusPanel analysis={ANALYSIS} hintText="💡 提示內容" hintExplanation={[]} message={null} />)
 
     expect(document.querySelector('.progress-text')?.textContent).toBe('已填入 30 / 81 格 (37%)　目前難度：簡單')
     expect(screen.getByText('💡 提示內容')).toBeInTheDocument()
     expect(document.querySelector('.progress-fill')).toHaveStyle({ width: '37%' })
   })
 
+  it('shows the hint explanation in a collapsible section when provided', () => {
+    render(
+      <StatusPanel
+        analysis={ANALYSIS}
+        hintText="💡 提示內容"
+        hintExplanation={['步驟一', '步驟二']}
+        message={null}
+      />,
+    )
+
+    const details = document.querySelector('.hint-explanation')
+    expect(details).toBeInTheDocument()
+    expect(screen.getByText('步驟一')).toBeInTheDocument()
+    expect(screen.getByText('步驟二')).toBeInTheDocument()
+  })
+
+  it('does not render the explanation section when there is none', () => {
+    render(<StatusPanel analysis={ANALYSIS} hintText="💡 提示內容" hintExplanation={[]} message={null} />)
+    expect(document.querySelector('.hint-explanation')).toBeNull()
+  })
+
   it('shows error messages in red and success messages in green', () => {
     const { rerender } = render(
-      <StatusPanel analysis={null} hintText="" message={{ text: '發生錯誤', isError: true }} />,
+      <StatusPanel analysis={null} hintText="" hintExplanation={[]} message={{ text: '發生錯誤', isError: true }} />,
     )
     expect(screen.getByText('發生錯誤')).toHaveStyle({ color: '#c0392b' })
 
-    rerender(<StatusPanel analysis={null} hintText="" message={{ text: '完成', isError: false }} />)
+    rerender(
+      <StatusPanel analysis={null} hintText="" hintExplanation={[]} message={{ text: '完成', isError: false }} />,
+    )
     expect(screen.getByText('完成')).toHaveStyle({ color: '#3a8a3a' })
   })
 })
