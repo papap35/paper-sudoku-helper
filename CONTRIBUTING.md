@@ -12,6 +12,7 @@
 ## 建立分支 (Create Branch)
 
 - 所有開發都在獨立分支上進行，不直接 commit 到 `main`
+- **絕對不直接 push 到 `main`**，也不直接合併/快轉 `main` 到本地後 push 回去；`main` 只能透過 PR 合併（由使用者或維護者在 GitHub 上操作）
 - 分支命名：`claude/<簡短描述>-<隨機ID>`，例如 `claude/repo-migration-continue-7e1m8e`
 - 一個分支對應一個明確的功能或修正主題，避免混雜不相關的變更
 
