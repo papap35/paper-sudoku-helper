@@ -17,7 +17,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 8 * 1024 * 1024  # 8MB，避免過大圖片上傳
+app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4MB，配合 Vercel 等平台的請求大小限制
 
 
 @app.route('/health')

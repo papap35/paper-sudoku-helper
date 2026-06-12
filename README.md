@@ -44,3 +44,18 @@ python app.py
 ```
 
 啟動後開啟瀏覽器訪問 `http://localhost:5000` 即可使用。
+
+## 部署到 Vercel
+
+repo 內已包含 `vercel.json`，使用 `@vercel/python` 將 `app.py` 部署為 serverless function。
+
+1. 到 [Vercel](https://vercel.com/) 用此 repo 建立新專案（Import Project）
+2. 在 Vercel 專案的 **Settings → Environment Variables** 新增：
+   - `ANTHROPIC_API_KEY`：你的 Anthropic API 金鑰
+   - `SUDOKU_OCR_MODEL`（可選）：辨識模型，預設 `claude-sonnet-4-6`
+3. 部署完成後開啟分配到的網址即可使用
+
+### 注意事項
+
+- Vercel serverless function 的請求大小限制約為 4.5MB，本專案已將 `MAX_CONTENT_LENGTH` 設為 4MB，請上傳適度大小的照片
+- 拍照辨識需呼叫 Claude API，若執行時間較長，可在 `vercel.json` 加入 `functions` 設定調整 `maxDuration`（依方案而有上限）
