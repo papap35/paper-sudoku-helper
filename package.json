@@ -1,0 +1,8 @@
+{
+  "name": "paper-sudoku-helper",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "api"
+  ]
+}

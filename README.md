@@ -31,24 +31,28 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 辨識功能使用的模型可透過 `SUDOKU_OCR_MODEL` 調整（預設 `claude-sonnet-4-6`）。
 
-### 步驟二：啟動後端 API
+### 步驟二：安裝相依套件
+
+本專案使用 npm workspaces，在根目錄安裝一次即可同時裝好 `frontend/` 和 `api/` 的相依套件：
 
 ```bash
-cd api
 npm install
-npm run dev
+```
+
+### 步驟三：啟動後端 API
+
+```bash
+npm run dev --workspace=api
 ```
 
 預設在 `http://localhost:5000` 提供 `/api/...` 路由。
 
-### 步驟三：啟動前端
+### 步驟四：啟動前端
 
 另開一個終端機：
 
 ```bash
-cd frontend
-npm install
-npm run dev
+npm run dev --workspace=frontend
 ```
 
 開啟瀏覽器訪問 `http://localhost:5173`，前端開發伺服器會將 `/api/*` 請求 proxy 到後端的 `http://localhost:5000`。
@@ -57,7 +61,8 @@ npm run dev
 
 repo 內已包含 `vercel.json`：
 
-- 前端：build `frontend/`（`npm install && npm run build`），輸出 `frontend/dist` 作為靜態網站
+- 根目錄為 npm workspaces 專案（`frontend/`、`api/`），Vercel 預設的 install command（`npm install`）會一次裝好兩邊的相依套件
+- 前端：`npm run build --workspace=frontend`，輸出 `frontend/dist` 作為靜態網站
 - 後端：`api/index.ts` 以 Node.js serverless function 部署，並透過 rewrite 將 `/api/*` 導向該 function
 
 1. 到 [Vercel](https://vercel.com/) 用此 repo 建立新專案（Import Project）
