@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 
 import sudoku_ocr
 import sudoku_solver
@@ -20,17 +20,12 @@ app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 4 * 1024 * 1024  # 4MB，配合 Vercel 等平台的請求大小限制
 
 
-@app.route('/health')
+@app.route('/api/health')
 def health():
     return {'status': 'ok'}
 
 
-@app.route('/')
-def index():
-    return render_template('sudoku.html')
-
-
-@app.route('/sudoku/scan', methods=['POST'])
+@app.route('/api/sudoku/scan', methods=['POST'])
 def sudoku_scan():
     image = request.files.get('image')
     if not image or not image.filename:
@@ -47,7 +42,7 @@ def sudoku_scan():
     return jsonify({'grid': grid})
 
 
-@app.route('/sudoku/analyze', methods=['POST'])
+@app.route('/api/sudoku/analyze', methods=['POST'])
 def sudoku_analyze():
     data = request.get_json(silent=True) or {}
     grid = data.get('grid')
