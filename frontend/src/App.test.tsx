@@ -47,6 +47,66 @@ describe('App', () => {
     expect(container.querySelectorAll('.cell-input')).toHaveLength(81)
   })
 
+  it('automatically analyzes the board shortly after a manual edit', async () => {
+    vi.useFakeTimers()
+    vi.mocked(analyzeGrid).mockResolvedValue(baseResult())
+
+    const { container } = render(<App />)
+    fireEvent.change(getCellInput(container, 0, 0), { target: { value: '5' } })
+
+    expect(analyzeGrid).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+
+    expect(analyzeGrid).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByText('目前盤面看起來沒有衝突，但找不到更簡單的提示了，可能需要更進階的技巧。'),
+    ).toBeInTheDocument()
+  })
+
+  it('debounces auto-analyze so rapid edits only trigger one request', async () => {
+    vi.useFakeTimers()
+    vi.mocked(analyzeGrid).mockResolvedValue(baseResult())
+
+    const { container } = render(<App />)
+    fireEvent.change(getCellInput(container, 0, 0), { target: { value: '5' } })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300)
+    })
+    expect(analyzeGrid).not.toHaveBeenCalled()
+
+    fireEvent.change(getCellInput(container, 0, 1), { target: { value: '3' } })
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+
+    expect(analyzeGrid).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not run a duplicate auto-analyze after manually clicking 分析盤面', async () => {
+    vi.useFakeTimers()
+    vi.mocked(analyzeGrid).mockResolvedValue(baseResult())
+
+    const { container } = render(<App />)
+    fireEvent.change(getCellInput(container, 0, 0), { target: { value: '5' } })
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: '分析盤面（候選數字 / 錯誤檢查）' }))
+      await Promise.resolve()
+    })
+    expect(analyzeGrid).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+
+    expect(analyzeGrid).toHaveBeenCalledTimes(1)
+  })
+
   it('shows a conflict message and marks conflicting cells when conflicts are found', async () => {
     const user = userEvent.setup()
     vi.mocked(analyzeGrid).mockResolvedValue(
