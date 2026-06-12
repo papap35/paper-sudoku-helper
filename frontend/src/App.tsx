@@ -14,6 +14,7 @@ export default function App() {
   const [showCandidates, setShowCandidates] = useState(false)
   const [hintCells, setHintCells] = useState<Set<string>>(new Set())
   const [hintText, setHintText] = useState('')
+  const [hintExplanation, setHintExplanation] = useState<string[]>([])
   const [message, setMessage] = useState<Message>(null)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -39,6 +40,7 @@ export default function App() {
     setAnalysis(null)
     setHintCells(new Set())
     setHintText('')
+    setHintExplanation([])
     setMessage(null)
   }
 
@@ -57,6 +59,7 @@ export default function App() {
       const result = await analyzeGrid(grid)
       setAnalysis(result)
       setHintCells(new Set())
+      setHintExplanation([])
 
       if (result.conflicts.length > 0) {
         setHintText('⚠️ 標記為紅色的格子互相衝突，請先修正。')
@@ -81,12 +84,14 @@ export default function App() {
     const hint = analysis.hint
     if (!hint) {
       setHintCells(new Set())
+      setHintExplanation([])
       setMessage({ text: '目前沒有可提供的提示。', isError: false })
       return
     }
 
     setHintCells(new Set(hint.cells.map(([r, c]) => `${r},${c}`)))
     setHintText(`💡 ${hint.technique_name}：${hint.message}`)
+    setHintExplanation(hint.explanation)
     setMessage(null)
   }
 
@@ -152,7 +157,7 @@ export default function App() {
         onToggleCandidates={setShowCandidates}
       />
 
-      <StatusPanel analysis={analysis} hintText={hintText} message={message} />
+      <StatusPanel analysis={analysis} hintText={hintText} hintExplanation={hintExplanation} message={message} />
     </main>
   )
 }

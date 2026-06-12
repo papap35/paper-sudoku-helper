@@ -8,6 +8,7 @@ export interface Hint {
   cells: Cell[]
   region?: string
   difficulty: string
+  explanation: string[]
 }
 
 export interface Progress {
