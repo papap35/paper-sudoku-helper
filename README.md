@@ -5,7 +5,7 @@
 ## 架構
 
 - `frontend/`：Vite + React + TypeScript 前端 SPA
-- `api/`：Flask API（`/api/health`、`/api/sudoku/scan`、`/api/sudoku/analyze`）
+- `api/`：Express + TypeScript API（`/api/health`、`/api/sudoku/scan`、`/api/sudoku/analyze`）
 
 ## 功能
 
@@ -34,11 +34,9 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ### 步驟二：啟動後端 API
 
 ```bash
-python -m venv venv
-source venv/bin/activate    # Windows: venv\Scripts\activate
-pip install -r requirements.txt
 cd api
-python index.py
+npm install
+npm run dev
 ```
 
 預設在 `http://localhost:5000` 提供 `/api/...` 路由。
@@ -60,7 +58,7 @@ npm run dev
 repo 內已包含 `vercel.json`：
 
 - 前端：build `frontend/`（`npm install && npm run build`），輸出 `frontend/dist` 作為靜態網站
-- 後端：`api/index.py` 以 `@vercel/python` 部署為 serverless function，並透過 rewrite 將 `/api/*` 導向該 function
+- 後端：`api/index.ts` 以 Node.js serverless function 部署，並透過 rewrite 將 `/api/*` 導向該 function
 
 1. 到 [Vercel](https://vercel.com/) 用此 repo 建立新專案（Import Project）
 2. 在 Vercel 專案的 **Settings → Environment Variables** 新增：
@@ -70,5 +68,5 @@ repo 內已包含 `vercel.json`：
 
 ### 注意事項
 
-- Vercel serverless function 的請求大小限制約為 4.5MB，本專案已將 `MAX_CONTENT_LENGTH` 設為 4MB，請上傳適度大小的照片
+- Vercel serverless function 的請求大小限制約為 4.5MB，本專案已將圖片上傳大小限制設為 4MB，請上傳適度大小的照片
 - 拍照辨識需呼叫 Claude API，若執行時間較長，可在 `vercel.json` 加入 `functions` 設定調整 `maxDuration`（依方案而有上限）
