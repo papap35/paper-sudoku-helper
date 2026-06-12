@@ -125,6 +125,14 @@ h1 {
   z-index: -1;
 }
 
+.cell.show-user-candidates .candidates {
+  display: grid;
+}
+
+.cell.show-user-candidates .cell-input {
+  z-index: -1;
+}
+
 .candidates span {
   display: flex;
   align-items: center;
@@ -135,6 +143,31 @@ h1 {
 
 .candidates span.active {
   color: #4a6cf7;
+}
+
+.candidates span.user {
+  position: relative;
+}
+
+.candidates span.user:not(.active) {
+  color: #2e8b57;
+}
+
+.candidates span.user::after {
+  content: '';
+  position: absolute;
+  inset: 8%;
+  border: 1.5px solid #2e8b57;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.candidates span.user.invalid {
+  color: #c0392b;
+}
+
+.candidates span.user.invalid::after {
+  border-color: #c0392b;
 }
 
 .cell.conflict {
@@ -245,4 +278,65 @@ button.secondary {
 .message {
   font-size: 0.85rem;
   min-height: 1.2em;
+}
+
+.candidate-editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10;
+}
+
+.candidate-editor {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  width: min(100%, 280px);
+  text-align: center;
+}
+
+.candidate-editor-title {
+  margin: 0 0 12px;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.candidate-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.candidate-editor-digit {
+  aspect-ratio: 1;
+  font-size: 1.2rem;
+  font-weight: 600;
+  background: #f0f0f5;
+  color: #333;
+  border-radius: 8px;
+}
+
+.candidate-editor-digit.selected {
+  background: #2e8b57;
+  color: #fff;
+}
+
+.candidate-editor-digit.invalid {
+  background: #c0392b;
+  color: #fff;
+}
+
+.candidate-editor-warning {
+  color: #c0392b;
+  font-size: 0.8rem;
+  margin: 0 0 12px;
+}
+
+.candidate-editor-close {
+  width: 100%;
 }

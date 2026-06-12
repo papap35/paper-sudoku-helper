@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
@@ -38,6 +38,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.useRealTimers()
 })
 
 describe('App', () => {
@@ -237,5 +238,92 @@ describe('App', () => {
 
     const message = await screen.findByText('辨識失敗')
     expect(message).toHaveStyle({ color: '#c0392b' })
+  })
+
+  it('opens a candidate editor on long press and marks the chosen digit on the board', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<App />)
+
+    const cell00 = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell00)
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    expect(screen.getByText(/手動候選數字/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '5' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+
+    expect(screen.queryByText(/手動候選數字/)).toBeNull()
+    expect(cell00).toHaveClass('show-user-candidates')
+    const spans = cell00.querySelectorAll('.candidates span')
+    expect(spans[4]).toHaveClass('user')
+    expect(spans[4]).not.toHaveClass('invalid')
+  })
+
+  it('flags a manually marked candidate that conflicts with a placed digit', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<App />)
+
+    fireEvent.change(getCellInput(container, 0, 1), { target: { value: '4' } })
+
+    const cell00 = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell00)
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '4' }))
+
+    expect(screen.getByText(/不可能填在這格/)).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+
+    const spans = cell00.querySelectorAll('.candidates span')
+    expect(spans[3]).toHaveClass('user')
+    expect(spans[3]).toHaveClass('invalid')
+  })
+
+  it('clears manual candidates when a value is entered into the cell', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<App />)
+
+    const cell00 = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell00)
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '5' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+
+    expect(cell00).toHaveClass('show-user-candidates')
+
+    fireEvent.change(getCellInput(container, 0, 0), { target: { value: '5' } })
+
+    expect(cell00).not.toHaveClass('show-user-candidates')
+  })
+
+  it('clears manual candidates when the board is cleared', async () => {
+    vi.useFakeTimers()
+    const { container } = render(<App />)
+
+    const cell00 = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell00)
+    await act(async () => {
+      vi.advanceTimersByTime(500)
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: '5' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+
+    expect(cell00).toHaveClass('show-user-candidates')
+
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: '清空盤面' }))
+
+    expect(cell00).not.toHaveClass('show-user-candidates')
   })
 })
