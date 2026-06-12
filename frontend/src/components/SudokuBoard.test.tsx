@@ -1,6 +1,6 @@
-import { render } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { MutableRefObject } from 'react'
 import SudokuBoard from './SudokuBoard'
 import { emptyGrid } from '../types'
@@ -15,6 +15,10 @@ function getCellInput(container: HTMLElement, r: number, c: number): HTMLInputEl
 }
 
 describe('SudokuBoard', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('renders 81 cell inputs with the grid values', () => {
     const grid = emptyGrid()
     grid[0][0] = 5
@@ -26,8 +30,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={false}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -49,8 +55,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={false}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={onCellChange}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -76,8 +84,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={false}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={onCellChange}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -99,8 +109,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={false}
+        userCandidates={{}}
         inputRefs={refs}
         onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -123,8 +135,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set(['0,0'])}
         hintCells={new Set(['1,1'])}
         showCandidates={false}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -143,8 +157,10 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={true}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
       />,
     )
 
@@ -169,12 +185,124 @@ describe('SudokuBoard', () => {
         conflicts={new Set()}
         hintCells={new Set()}
         showCandidates={true}
+        userCandidates={{}}
         inputRefs={createRefs()}
         onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
       />,
     )
 
     const firstCell = container.querySelectorAll('.cell')[0]
     expect(firstCell.querySelector('.candidates')).toBeNull()
+  })
+
+  it('triggers onLongPressCell after holding an empty cell', () => {
+    vi.useFakeTimers()
+    const onLongPressCell = vi.fn()
+    const grid = emptyGrid()
+
+    const { container } = render(
+      <SudokuBoard
+        grid={grid}
+        candidates={{}}
+        conflicts={new Set()}
+        hintCells={new Set()}
+        showCandidates={false}
+        userCandidates={{}}
+        inputRefs={createRefs()}
+        onCellChange={vi.fn()}
+        onLongPressCell={onLongPressCell}
+      />,
+    )
+
+    const cell = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell)
+    vi.advanceTimersByTime(500)
+
+    expect(onLongPressCell).toHaveBeenCalledWith(0, 0)
+  })
+
+  it('does not trigger onLongPressCell when the pointer is released early', () => {
+    vi.useFakeTimers()
+    const onLongPressCell = vi.fn()
+    const grid = emptyGrid()
+
+    const { container } = render(
+      <SudokuBoard
+        grid={grid}
+        candidates={{}}
+        conflicts={new Set()}
+        hintCells={new Set()}
+        showCandidates={false}
+        userCandidates={{}}
+        inputRefs={createRefs()}
+        onCellChange={vi.fn()}
+        onLongPressCell={onLongPressCell}
+      />,
+    )
+
+    const cell = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell)
+    vi.advanceTimersByTime(200)
+    fireEvent.pointerUp(cell)
+    vi.advanceTimersByTime(500)
+
+    expect(onLongPressCell).not.toHaveBeenCalled()
+  })
+
+  it('does not trigger onLongPressCell on a filled cell', () => {
+    vi.useFakeTimers()
+    const onLongPressCell = vi.fn()
+    const grid = emptyGrid()
+    grid[0][0] = 5
+
+    const { container } = render(
+      <SudokuBoard
+        grid={grid}
+        candidates={{}}
+        conflicts={new Set()}
+        hintCells={new Set()}
+        showCandidates={false}
+        userCandidates={{}}
+        inputRefs={createRefs()}
+        onCellChange={vi.fn()}
+        onLongPressCell={onLongPressCell}
+      />,
+    )
+
+    const cell = container.querySelectorAll('.cell')[0]
+    fireEvent.pointerDown(cell)
+    vi.advanceTimersByTime(500)
+
+    expect(onLongPressCell).not.toHaveBeenCalled()
+  })
+
+  it('shows user-marked candidates and flags ones that are no longer possible', () => {
+    const grid = emptyGrid()
+    grid[0][1] = 4
+
+    const { container } = render(
+      <SudokuBoard
+        grid={grid}
+        candidates={{}}
+        conflicts={new Set()}
+        hintCells={new Set()}
+        showCandidates={false}
+        userCandidates={{ '0,0': new Set([2, 4]) }}
+        inputRefs={createRefs()}
+        onCellChange={vi.fn()}
+        onLongPressCell={vi.fn()}
+      />,
+    )
+
+    const cells = container.querySelectorAll('.cell')
+    expect(cells[0]).toHaveClass('show-user-candidates')
+    expect(cells[1]).not.toHaveClass('show-user-candidates')
+
+    const spans = cells[0].querySelectorAll('.candidates span')
+    expect(spans[1]).toHaveClass('user') // digit 2, still possible
+    expect(spans[1]).not.toHaveClass('invalid')
+    expect(spans[3]).toHaveClass('user') // digit 4, blocked by (0,1)
+    expect(spans[3]).toHaveClass('invalid')
   })
 })

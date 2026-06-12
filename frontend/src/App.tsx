@@ -3,6 +3,7 @@ import SudokuBoard from './components/SudokuBoard'
 import UploadBox from './components/UploadBox'
 import Controls from './components/Controls'
 import StatusPanel from './components/StatusPanel'
+import CandidateEditor from './components/CandidateEditor'
 import { ApiError, analyzeGrid, scanImage } from './api'
 import { emptyGrid, type AnalyzeResult, type Grid } from './types'
 
@@ -19,6 +20,8 @@ export default function App() {
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
+  const [userCandidates, setUserCandidates] = useState<Record<string, Set<number>>>({})
+  const [editingCell, setEditingCell] = useState<[number, number] | null>(null)
 
   const inputRefs = useRef<(HTMLInputElement | null)[][]>(
     Array.from({ length: 9 }, () => Array(9).fill(null)),
@@ -50,6 +53,15 @@ export default function App() {
       next[r][c] = value
       return next
     })
+    if (value !== 0) {
+      const key = `${r},${c}`
+      setUserCandidates((prev) => {
+        if (!prev[key]) return prev
+        const next = { ...prev }
+        delete next[key]
+        return next
+      })
+    }
     clearAnalysis()
   }
 
@@ -97,7 +109,39 @@ export default function App() {
 
   function handleClear() {
     setGrid(emptyGrid())
+    setUserCandidates({})
+    setEditingCell(null)
     clearAnalysis()
+  }
+
+  function handleLongPressCell(r: number, c: number) {
+    if (grid[r][c] !== 0) return
+    setEditingCell([r, c])
+  }
+
+  function handleToggleUserCandidate(digit: number) {
+    if (!editingCell) return
+    const [r, c] = editingCell
+    const key = `${r},${c}`
+    setUserCandidates((prev) => {
+      const current = new Set(prev[key] ?? [])
+      if (current.has(digit)) {
+        current.delete(digit)
+      } else {
+        current.add(digit)
+      }
+      const next = { ...prev }
+      if (current.size > 0) {
+        next[key] = current
+      } else {
+        delete next[key]
+      }
+      return next
+    })
+  }
+
+  function handleCloseCandidateEditor() {
+    setEditingCell(null)
   }
 
   function handleFileChange(file: File | null) {
@@ -144,8 +188,10 @@ export default function App() {
           conflicts={conflictSet}
           hintCells={hintCells}
           showCandidates={showCandidates}
+          userCandidates={userCandidates}
           inputRefs={inputRefs}
           onCellChange={handleCellChange}
+          onLongPressCell={handleLongPressCell}
         />
       </div>
 
@@ -158,6 +204,16 @@ export default function App() {
       />
 
       <StatusPanel analysis={analysis} hintText={hintText} hintExplanation={hintExplanation} message={message} />
+
+      {editingCell && (
+        <CandidateEditor
+          grid={grid}
+          cell={editingCell}
+          selected={userCandidates[`${editingCell[0]},${editingCell[1]}`] ?? new Set()}
+          onToggle={handleToggleUserCandidate}
+          onClose={handleCloseCandidateEditor}
+        />
+      )}
     </main>
   )
 }
