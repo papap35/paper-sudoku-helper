@@ -17,7 +17,7 @@ export default function UploadBox({ previewUrl, scanning, canScan, onFileChange,
     <section className="upload-box">
       <label className="file-label">
         📷 拍照 / 上傳數獨照片
-        <input type="file" accept="image/*" capture="environment" onChange={handleChange} />
+        <input type="file" accept="image/*" onChange={handleChange} />
       </label>
       <button type="button" disabled={!canScan || scanning} onClick={onScan}>
         {scanning ? '辨識中...' : '辨識盤面'}
